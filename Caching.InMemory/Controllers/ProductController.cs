@@ -11,6 +11,7 @@ namespace Caching.InMemory.Controllers
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly ICacheService _cacheService;
+        private static object _lock = new object();
         public ProductController(ApplicationDbContext dbContext, ICacheService cacheService)
         {
             _dbContext = dbContext;
@@ -24,9 +25,12 @@ namespace Caching.InMemory.Controllers
             {
                 return cacheData;
             }
-            var expirationTime = DateTimeOffset.Now.AddMinutes(5.0);
-            cacheData = _dbContext.Products.ToList();
-            _cacheService.SetData<IEnumerable<Product>>("product", cacheData, expirationTime);
+            lock (_lock)
+            {
+                var expirationTime = DateTimeOffset.Now.AddMinutes(5.0);
+                cacheData = _dbContext.Products.ToList();
+                _cacheService.SetData<IEnumerable<Product>>("product", cacheData, expirationTime);
+            }
             return cacheData;
         }
         [HttpGet("products/{id:int}")]
